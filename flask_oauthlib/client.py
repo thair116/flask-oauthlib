@@ -384,6 +384,32 @@ class OAuthRemoteApp(object):
         kwargs['method'] = 'DELETE'
         return self.request(*args, **kwargs)
 
+    def refresh(self, url, refresh_token):
+
+        refresh_token = refresh_token
+        # or
+        # refresh_token = self.get_refresh_token()
+        url = self.expand_url(url)
+
+        client = self.make_client()
+        # content_type=''
+        # headers = dict({})
+        # headers['Content-Type'] = content_type
+        method='POST'
+
+        remote_args = {
+            'client_secret': self.consumer_secret,
+            'client_key': self.consumer_key,
+            'redirect_uri': session.get('%s_oauthredir' % self.name)
+        }
+
+        body = client.prepare_refresh_body(refresh_token=refresh_token, **remote_args)
+        resp, content = self.http_request(
+            url, data=to_bytes(body, self.encoding), method='POST'
+        )
+
+        return OAuthResponse(resp, content, self.content_type)
+
     def request(self, url, data=None, headers=None, format='urlencoded',
                 method='GET', content_type=None, token=None):
         """
@@ -501,6 +527,13 @@ class OAuthRemoteApp(object):
         self._tokengetter = f
         return f
 
+    # def refreshgetter(self, f):
+    #     """
+    #     Register a function as refresh token getter.
+    #     """
+    #     self._refreshgetter = f
+    #     return f
+
     def expand_url(self, url):
         return urljoin(self.base_url, url)
 
@@ -542,6 +575,13 @@ class OAuthRemoteApp(object):
         if rv is None:
             raise OAuthException('No token available', type='token_missing')
         return rv
+
+    # def get_refresh_token(self):
+    #     assert self.refreshgetter is not None, 'missing refreshgetter'
+    #     rv = self.refreshgetter()
+    #     if rv is None:
+    #         raise OAuthException('No refresh token available', type='refresh_missing')
+    #     return rv
 
     def handle_oauth1_response(self):
         """Handles an oauth1 authorization response."""
